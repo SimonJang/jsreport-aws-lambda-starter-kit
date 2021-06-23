@@ -1,3 +1,4 @@
+const {S3} = require('aws-sdk');
 const chromium = require('chrome-aws-lambda')
 const JsReport = require('jsreport')
 const promisify = require('util').promisify
@@ -6,6 +7,7 @@ const path = require('path')
 const fs = require('fs')
 let jsreport
 
+const s3 = new S3()
 
 const init = (async () => {    
     jsreport = JsReport({
@@ -27,10 +29,16 @@ exports.handler = async (event) => {
   await init
 
   const res = await jsreport.render(event.renderRequest)
+
+  const result = await s3.putObject({
+      Bucket: 'deleteme-pdfgeneration-poc',
+      Key: `file-${new Date().getTime()}.pdf`,
+      Body: Buffer.from(res.content.toString('base64'), 'base64'),
+  }).promise();
   
   const response = {
       statusCode: 200,
-      body: res.content.toString('base64'),
+      body: result
   }
 
   return response
